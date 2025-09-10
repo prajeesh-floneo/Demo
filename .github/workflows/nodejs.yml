@@ -45,6 +45,14 @@ jobs:
         run: |
           cd server
           npx prisma generate
+      - name: Wait for Postgres to be ready
+        shell: bash
+        run: |
+          for i in {1..60}; do
+            if (echo > /dev/tcp/127.0.0.1/5432) >/dev/null 2>&1; then echo "Postgres is up"; exit 0; fi
+            sleep 1
+          done
+          echo "Postgres did not become ready in time"; exit 1
       - name: Run Prisma migrations
         run: |
           cd server
