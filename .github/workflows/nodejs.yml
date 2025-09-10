@@ -48,8 +48,9 @@ jobs:
       - name: Start server (background)
         run: |
           cd server
-          nohup npm start &
-          sleep 10
+          nohup npm start > server.log 2>&1 &
+          sleep 15
+          cat server.log
       - name: Check server is running
         run: |
-          curl -I --retry 5 --retry-delay 2 http://localhost:5000 || exit 1
+          curl -I --retry 10 --retry-delay 2 http://localhost:5000 || exit 1
