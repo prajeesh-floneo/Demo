@@ -1,4 +1,8 @@
-# FloNeo Login Page Project
+# FloNeo
+
+## Status
+- ✅ Submodule configuration fixed
+- ✅ GitHub Actions CI/CD pipeline updated Login Page Project
 
 This project contains a React frontend and a Node.js backend. The frontend implements a login page matching the provided design. The backend provides a mock authentication endpoint.
 
