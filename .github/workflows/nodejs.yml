@@ -65,6 +65,8 @@ jobs:
           cd server
           npm run test || echo "No tests defined"
       - name: Start server (background)
+        env:
+          DATABASE_URL: postgresql://fathima:mypassword@localhost:5432/lowcode_db?schema=public
         run: |
           cd server
           nohup npm start > server.log 2>&1 &
