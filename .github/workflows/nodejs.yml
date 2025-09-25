@@ -97,11 +97,61 @@ jobs:
       - name: Start server (background)
         env:
           DATABASE_URL: postgresql://fathima:mypassword@localhost:5432/lowcode_db?schema=public
+          NODE_ENV: development
+          PORT: 5000
+          JWT_SECRET: test-jwt-secret-for-ci-environment
+          JWT_REFRESH_SECRET: test-jwt-refresh-secret-for-ci-environment
+          BCRYPT_ROUNDS: 10
+          FRONTEND_URL: http://localhost:3000
         run: |
           cd server
+          echo "Starting server with environment variables..."
+          echo "DATABASE_URL: $DATABASE_URL"
+          echo "NODE_ENV: $NODE_ENV"
+          echo "PORT: $PORT"
+
+          # Start server in background
           nohup npm start > server.log 2>&1 &
-          sleep 15
+          SERVER_PID=$!
+          echo "Server started with PID: $SERVER_PID"
+
+          # Wait for server to start and check logs periodically
+          for i in {1..30}; do
+            echo "Waiting for server to start... ($i/30)"
+            sleep 2
+
+            # Check if server process is still running
+            if ! kill -0 $SERVER_PID 2>/dev/null; then
+              echo "Server process died! Checking logs:"
+              cat server.log
+              exit 1
+            fi
+
+            # Check if server is responding
+            if curl -s http://localhost:5000/health > /dev/null 2>&1; then
+              echo "Server is responding!"
+              break
+            fi
+
+            # Show recent logs
+            if [ -f server.log ]; then
+              echo "Recent server logs:"
+              tail -5 server.log
+            fi
+          done
+
+          echo "Final server logs:"
           cat server.log
       - name: Check server is running
         run: |
-          curl -I --retry 10 --retry-delay 2 http://localhost:5000 || exit 1
+          echo "Testing server endpoints..."
+          echo "Testing health endpoint..."
+          curl -v http://localhost:5000/health || {
+            echo "Server health check failed. Checking logs:"
+            cd server
+            cat server.log
+            echo "Checking if server process is still running..."
+            ps aux | grep node || echo "No node processes found"
+            exit 1
+          }
+          echo "Server is running successfully!"
