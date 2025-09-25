@@ -45,22 +45,29 @@ jobs:
         run: |
           cd server
           npm ci || npm install
-          chmod +x node_modules/.bin/* || true
+          # Ensure Prisma CLI is properly installed
+          npm install prisma @prisma/client --save-dev || true
           cd ../client
           npm ci || npm install
-          chmod +x node_modules/.bin/* || true
       - name: Verify Prisma Installation
         run: |
           cd server
+          echo "Checking Prisma installation..."
+          npm list prisma || echo "Prisma CLI not found"
+          npm list @prisma/client || echo "Prisma client not found"
           ls -la node_modules/.bin/prisma || echo "Prisma binary not found"
+          which node || echo "Node not found"
           which npx || echo "npx not found"
-          npm list @prisma/client || echo "Prisma client not installed"
       - name: Generate Prisma Client
         run: |
           cd server
-          chmod +x node_modules/.bin/prisma || true
-          chmod +x node_modules/.bin/* || true
-          npx prisma generate --schema=prisma/schema.prisma
+          echo "Attempting to generate Prisma client..."
+          # Try npm script first, then fallback methods
+          npm run prisma:generate || \
+          node node_modules/.bin/prisma generate --schema=prisma/schema.prisma || \
+          npx --yes prisma generate --schema=prisma/schema.prisma || \
+          node -e "require('./node_modules/prisma/build/index.js').main(['generate', '--schema=prisma/schema.prisma'])" || \
+          echo "All Prisma generate attempts failed"
         env:
           DATABASE_URL: postgresql://fathima:mypassword@localhost:5432/lowcode_db?schema=public
       - name: Wait for Postgres to be ready
@@ -74,8 +81,13 @@ jobs:
       - name: Run Prisma migrations
         run: |
           cd server
-          chmod +x node_modules/.bin/prisma || true
-          npx prisma migrate deploy --schema=prisma/schema.prisma
+          echo "Running Prisma migrations..."
+          # Try npm script first, then fallback methods
+          npm run prisma:migrate || \
+          node node_modules/.bin/prisma migrate deploy --schema=prisma/schema.prisma || \
+          npx --yes prisma migrate deploy --schema=prisma/schema.prisma || \
+          node -e "require('./node_modules/prisma/build/index.js').main(['migrate', 'deploy', '--schema=prisma/schema.prisma'])" || \
+          echo "All Prisma migration attempts failed"
         env:
           DATABASE_URL: postgresql://fathima:mypassword@localhost:5432/lowcode_db?schema=public
       - name: Lint and Test
