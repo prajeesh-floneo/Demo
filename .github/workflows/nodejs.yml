@@ -16,8 +16,14 @@ jobs:
           POSTGRES_USER: fathima
           POSTGRES_PASSWORD: mypassword
           POSTGRES_DB: lowcode_db
+          POSTGRES_HOST_AUTH_METHOD: trust
         ports:
           - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     strategy:
       matrix:
         node-version: [18.x]
@@ -39,12 +45,24 @@ jobs:
         run: |
           cd server
           npm ci || npm install
+          chmod +x node_modules/.bin/* || true
           cd ../client
           npm ci || npm install
+          chmod +x node_modules/.bin/* || true
+      - name: Verify Prisma Installation
+        run: |
+          cd server
+          ls -la node_modules/.bin/prisma || echo "Prisma binary not found"
+          which npx || echo "npx not found"
+          npm list @prisma/client || echo "Prisma client not installed"
       - name: Generate Prisma Client
         run: |
           cd server
-          npx prisma generate
+          chmod +x node_modules/.bin/prisma || true
+          chmod +x node_modules/.bin/* || true
+          npx prisma generate --schema=prisma/schema.prisma
+        env:
+          DATABASE_URL: postgresql://fathima:mypassword@localhost:5432/lowcode_db?schema=public
       - name: Wait for Postgres to be ready
         shell: bash
         run: |
