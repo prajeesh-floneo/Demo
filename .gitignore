@@ -34,10 +34,17 @@ build/
 
 # IDE and editor files
 .vscode/
+*/.vscode/
 .idea/
 *.swp
 *.swo
 *~
+
+# Development scripts (keep locally, ignore in repo)
+scripts/
+*.local.js
+*-demo-*.json
+*postman*.json
 
 # OS generated files
 .DS_Store
