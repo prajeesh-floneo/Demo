@@ -134,6 +134,7 @@ const sanitizeApp = (app) => {
     name: app.name,
     description: app.description,
     status: app.status,
+    archived: app.archived,
     ownerId: app.ownerId,
     templateId: app.templateId,
     createdAt: app.createdAt,

@@ -16,7 +16,7 @@ model User {
   updatedAt     DateTime        @default(now()) @updatedAt
   verified      Boolean         @default(true) // Developers are pre-verified
   apps          App[]
-  ownedProjects Project[]       @relation("ProjectOwner")
+  // ownedProjects Project[]       @relation("ProjectOwner") // REMOVED: Project table dropped
   notifications Notification[]
   canvasHistory CanvasHistory[]
   mediaFiles    MediaFile[]
@@ -27,6 +27,7 @@ model App {
   name        String
   description String?
   status      AppStatus   @default(Draft)
+  archived    Boolean     @default(false)
   ownerId     Int
   templateId  Int?        // Optional: if created from template
   createdAt   DateTime    @default(now())
@@ -90,26 +91,27 @@ model Otp {
   @@index([email, type])
 }
 
-model Project {
-  id             Int             @id @default(autoincrement())
-  name           String
-  description    String?
-  ownerId        Int
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  deletedAt      DateTime?
-  activationDate DateTime?
-  favorite       Boolean?        @default(false)
-  status         String          @default("Inactive")
-  owner          User            @relation("ProjectOwner", fields: [ownerId], references: [id])
-
-  @@index([ownerId])
-  @@index([status])
-  @@index([deletedAt])
-  @@index([activationDate])
-  @@index([deletedAt], map: "idx_project_deleted")
-  @@index([ownerId], map: "idx_project_owner")
-}
+// model Project {
+//   id             Int             @id @default(autoincrement())
+//   name           String
+//   description    String?
+//   ownerId        Int
+//   createdAt      DateTime        @default(now())
+//   updatedAt      DateTime        @updatedAt
+//   deletedAt      DateTime?
+//   activationDate DateTime?
+//   favorite       Boolean?        @default(false)
+//   status         String          @default("Inactive")
+//   owner          User            @relation("ProjectOwner", fields: [ownerId], references: [id])
+//
+//   @@index([ownerId])
+//   @@index([status])
+//   @@index([deletedAt])
+//   @@index([activationDate])
+//   @@index([deletedAt], map: "idx_project_deleted")
+//   @@index([ownerId], map: "idx_project_owner")
+// }
+// REMOVED: Project table dropped from database
 
 model AppSchema {
   id            Int        @id @default(autoincrement())
@@ -221,28 +223,30 @@ model BlacklistedToken {
   @@index([expiresAt])
 }
 
-model backup_users_20250916 {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  role      String   @default("user")
-  updatedAt DateTime @default(now()) @updatedAt
-  verified  Boolean  @default(false)
+// model backup_users_20250916 {
+//   id        Int      @id @default(autoincrement())
+//   email     String   @unique
+//   password  String
+//   createdAt DateTime @default(now())
+//   role      String   @default("user")
+//   updatedAt DateTime @default(now()) @updatedAt
+//   verified  Boolean  @default(false)
+//
+//   @@map("backup_users_20250916")
+// }
+// REMOVED: Backup table dropped from database
 
-  @@map("backup_users_20250916")
-}
-
-model backup_notifications_20250916 {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  type      String
-  message   String
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  @@map("backup_notifications_20250916")
-}
+// model backup_notifications_20250916 {
+//   id        Int      @id @default(autoincrement())
+//   userId    Int
+//   type      String
+//   message   String
+//   read      Boolean  @default(false)
+//   createdAt DateTime @default(now())
+//
+//   @@map("backup_notifications_20250916")
+// }
+// REMOVED: Backup table dropped from database
 
 // ProjectInvite, ProjectMember and RefreshToken models removed - simplified single-developer ownership and authentication
 
@@ -399,4 +403,12 @@ enum ElementType {
   UPLOAD_MEDIA
   ADD_MEDIA
   SHAPE
+  ICON_MINIMIZE
+  ICON_MAXIMIZE
+  ICON_CLOSE
+  ICON_SETTINGS
+  ICON_REFRESH
+  ICON_INFO
+  ICON_HELP
+  ICON_SEARCH
 }

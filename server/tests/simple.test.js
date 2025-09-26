@@ -4,12 +4,12 @@ const { PrismaClient } = require('@prisma/client');
 // Mock the server setup
 const express = require('express');
 const authRoutes = require('../routes/auth');
-const projectRoutes = require('../routes/projects');
+// const projectRoutes = require('../routes/projects'); // REMOVED: projects route doesn't exist
 
 const app = express();
 app.use(express.json());
 app.use('/auth', authRoutes);
-app.use('/api/projects', projectRoutes);
+// app.use('/api/projects', projectRoutes); // REMOVED: projects route doesn't exist
 
 const prisma = new PrismaClient();
 
@@ -20,26 +20,11 @@ describe('Simple Integration Tests', () => {
   // Helper function to clean up test data in correct order
   const cleanupTestData = async () => {
     await prisma.$transaction(async (tx) => {
-      await tx.projectInvite.deleteMany({
-        where: { email: { contains: 'simpletest' } }
-      });
-      
-      await tx.projectMember.deleteMany({
-        where: { user: { email: { contains: 'simpletest' } } }
-      });
-      
-      await tx.project.deleteMany({
-        where: { owner: { email: { contains: 'simpletest' } } }
-      });
-      
-      await tx.refreshToken.deleteMany({
-        where: { user: { email: { contains: 'simpletest' } } }
-      });
-      
+      // Clean up only tables that exist in the current schema
       await tx.otp.deleteMany({
         where: { email: { contains: 'simpletest' } }
       });
-      
+
       await tx.user.deleteMany({
         where: { email: { contains: 'simpletest' } }
       });
@@ -59,7 +44,7 @@ describe('Simple Integration Tests', () => {
     jest.clearAllTimers();
   });
 
-  it('should complete full auth and project flow', async () => {
+  it('should complete full auth flow', async () => {
     // 1. Signup
     const signupResponse = await request(app)
       .post('/auth/signup')
@@ -93,31 +78,7 @@ describe('Simple Integration Tests', () => {
     testUser = verifyResponse.body.data.user;
     authToken = verifyResponse.body.data.accessToken;
 
-    // 3. Create project
-    const projectResponse = await request(app)
-      .post('/api/projects')
-      .set('Authorization', `Bearer ${authToken}`)
-      .send({
-        name: 'Simple Test Project',
-        description: 'Testing the API',
-        status: 'DRAFT'
-      })
-      .expect(201);
-
-    expect(projectResponse.body.success).toBe(true);
-    expect(projectResponse.body.data.project.name).toBe('Simple Test Project');
-
-    // 4. List projects
-    const listResponse = await request(app)
-      .get('/api/projects')
-      .set('Authorization', `Bearer ${authToken}`)
-      .expect(200);
-
-    expect(listResponse.body.success).toBe(true);
-    expect(listResponse.body.data.projects).toHaveLength(1);
-    expect(listResponse.body.data.pagination.total).toBe(1);
-
-    // 5. Login (should work after verification)
+    // 3. Login (should work after verification)
     const loginResponse = await request(app)
       .post('/auth/login')
       .send({

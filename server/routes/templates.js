@@ -66,6 +66,47 @@ router.get('/', asyncHandler(async (req, res) => {
   }));
 }));
 
+// GET /api/templates/:id - Get specific template details (for canvas loading)
+router.get('/:id', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const template = await prisma.template.findUnique({
+    where: { id: parseInt(id) },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      preview_image: true,
+      app_schema: true,
+      category: true,
+      createdAt: true
+    }
+  });
+
+  if (!template) {
+    return res.status(404).json(createStandardError('Template not found', 'TEMPLATE_NOT_FOUND'));
+  }
+
+  // Emit Socket.io event for template access
+  if (io) {
+    io.emit('template:accessed', {
+      userId: req.user.id,
+      userEmail: req.user.email,
+      action: 'template_viewed',
+      templateId: template.id,
+      templateName: template.name,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  res.json(createSuccessResponse('Template retrieved successfully', {
+    template: {
+      ...template,
+      structure: template.app_schema // Provide structure for canvas loading
+    }
+  }));
+}));
+
 // Function to inject Socket.io instance
 router.setSocketIO = (socketIO) => {
   io = socketIO;

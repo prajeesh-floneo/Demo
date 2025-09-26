@@ -55,6 +55,7 @@ router.get('/', validate(schemas.appsQuery, 'query'), async (req, res) => {
           name: true,
           description: true,
           status: true,
+          archived: true,
           templateId: true,
           createdAt: true,
           updatedAt: true,
@@ -485,6 +486,77 @@ router.put('/:id/status', validate(schemas.idParams, 'params'), validate(schemas
     res.status(500).json({
       success: false,
       message: 'Failed to update app status'
+    });
+  }
+});
+
+// PATCH /api/apps/:id - Update app properties (including archived status)
+router.patch('/:id', validate(schemas.idParams, 'params'), async (req, res) => {
+  try {
+    const appId = parseInt(req.params.id);
+    const userId = req.user.id;
+    const { archived, name, description, status } = req.body;
+
+    // Verify app ownership
+    const existingApp = await prisma.app.findFirst({
+      where: {
+        id: appId,
+        ownerId: userId
+      }
+    });
+
+    if (!existingApp) {
+      return res.status(404).json({
+        success: false,
+        message: 'App not found or access denied'
+      });
+    }
+
+    // Build update data object
+    const updateData = {};
+    if (archived !== undefined) updateData.archived = archived;
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+    if (status !== undefined) updateData.status = status;
+
+    // Update the app
+    const updatedApp = await prisma.app.update({
+      where: { id: appId },
+      data: updateData,
+      include: {
+        owner: {
+          select: {
+            id: true,
+            email: true,
+            role: true
+          }
+        },
+        template: {
+          select: {
+            id: true,
+            name: true,
+            category: true
+          }
+        }
+      }
+    });
+
+    console.log(`✅ App ${appId} updated:`, updateData);
+
+    res.json({
+      success: true,
+      message: 'App updated successfully',
+      data: {
+        app: sanitizeApp(updatedApp)
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error updating app:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update app',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
