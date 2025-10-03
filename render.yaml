@@ -14,7 +14,7 @@ services:
       npm ci
       npx prisma generate
       npm run build || echo "build step skipped"
-    startCommand: npm start
+    startCommand: npx prisma migrate deploy && npm start
     autoDeploy: true
     healthCheckPath: /health
     envVars:
@@ -33,7 +33,6 @@ services:
       name: floneo-uploads
       mountPath: /server/uploads
       sizeGB: 1
-    postDeployCommand: npx prisma migrate deploy
 
   # --- Frontend (client/) ---
   - name: floneo-frontend
