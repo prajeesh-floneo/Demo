@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "build": "tsc -p . || true && node -e \"console.log('build step complete')\"",
-    "start": "node index.js",
+    "build": "npx prisma generate && node -e \"console.log('build step complete')\"",
+    "start": "npx prisma migrate deploy && node index.js",
     "dev": "nodemon index.js",
     "test": "jest --detectOpenHandles --forceExit",
     "test:watch": "jest --watch --detectOpenHandles",
@@ -14,7 +14,8 @@
     "prisma:migrate:deploy": "prisma migrate deploy --schema=prisma/schema.prisma",
     "prisma:studio": "prisma studio --schema=prisma/schema.prisma",
     "db:push": "prisma db push --schema=prisma/schema.prisma",
-    "db:seed": "node prisma/seed.js"
+    "db:seed": "node prisma/seed.js",
+    "railway:deploy": "railway up"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

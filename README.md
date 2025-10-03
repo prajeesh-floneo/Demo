@@ -2,6 +2,16 @@
 
 FloNeo is a comprehensive low-code/no-code platform that enables developers to create applications through an intuitive drag-and-drop canvas interface with real-time collaboration features.
 
+## 🌐 Live Demo
+
+- **Frontend**: [Deployed on Vercel](https://your-app.vercel.app)
+- **Backend API**: [Deployed on Railway](https://your-app.railway.app)
+
+## 🚀 Quick Deploy
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/your-template)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/prajeesh-floneo/Demo)
+
 ## ✨ Features
 
 - **🎨 Visual Canvas Editor**: Drag-and-drop interface for building applications
@@ -147,6 +157,26 @@ See detailed deployment instructions below.
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+## 🚀 Deployment
+
+This project is configured for deployment on **Railway** (backend) and **Vercel** (frontend).
+
+### Railway (Backend)
+
+1. Fork this repository
+2. Connect to Railway
+3. Deploy from `server/` directory
+4. Add PostgreSQL database
+5. Set environment variables
+
+### Vercel (Frontend)
+
+1. Connect to Vercel
+2. Deploy from `client/` directory
+3. Set `NEXT_PUBLIC_API_URL` to your Railway URL
+
+For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
 
 ## 📄 License
 
