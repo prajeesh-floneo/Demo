@@ -1,10 +1,9 @@
-services:
-  # --- Managed Postgres ---
+databases:
   - name: floneo-postgres
-    type: postgres
-    plan: starter
-    ipAllowList: [] # allow all Render services in the project
+    databaseName: floneo
+    user: floneo
 
+services:
   # --- Backend API (server/) ---
   - name: floneo-backend
     type: web
