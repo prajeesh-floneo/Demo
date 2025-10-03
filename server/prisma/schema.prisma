@@ -72,11 +72,21 @@ model Component {
 }
 
 model Workflow {
-  id    Int    @id @default(autoincrement())
-  name  String
-  appId Int
-  steps Json
-  app   App    @relation(fields: [appId], references: [id])
+  id        Int      @id @default(autoincrement())
+  name      String
+  appId     Int
+  pageId    String?  // Page ID this workflow belongs to
+  elementId String?  // Canvas element ID this workflow is linked to
+  nodes     Json     // Workflow nodes array
+  edges     Json     // Workflow edges/connectors array
+  metadata  Json?    // Additional workflow metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  app       App      @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+  @@index([appId])
+  @@index([pageId])
+  @@index([elementId])
 }
 
 model Otp {
@@ -283,6 +293,7 @@ model Canvas {
   width       Int             @default(1200)
   height      Int             @default(800)
   background  Json            @default("{\"color\": \"#ffffff\", \"opacity\": 100}")
+  canvasState Json?           // Store full pages array and multi-page state
   gridEnabled Boolean         @default(true)
   snapEnabled Boolean         @default(true)
   zoomLevel   Float           @default(1.0)

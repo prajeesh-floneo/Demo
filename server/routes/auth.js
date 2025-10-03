@@ -217,6 +217,11 @@ router.post('/login', validate(schemas.login), asyncHandler(async (req, res) => 
 
   // Return success response
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+
+  console.log('✅ AUTH: Login successful for:', email);
+  console.log('✅ AUTH: Access token generated:', accessToken.substring(0, 20) + '...');
+  console.log('✅ AUTH: Token will be sent in response as data.accessToken');
+
   res.json(createSuccessResponse('Login successful', {
     user: sanitizeUser(user),
     accessToken,

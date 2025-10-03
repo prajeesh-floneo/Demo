@@ -11,6 +11,8 @@ const uuidv4 = () => {
 const router = express.Router();
 const prisma = new PrismaClient();
 
+console.log('🔧 Canvas routes loaded with debug logging enabled');
+
 let io; // Socket.io instance
 
 // Inject Socket.io instance
@@ -21,16 +23,30 @@ const setSocketIO = (socketInstance) => {
 // ===== CANVAS MANAGEMENT =====
 
 // GET /api/canvas/:appId - Get canvas for an app
-router.get('/:appId', authenticateToken, async (req, res) => {
+router.get('/:appId', (req, res, next) => {
+  if (req.query.preview) {
+    console.log('🎥 CANVAS: Bypassing auth for preview mode');
+    next(); // Bypass auth for preview
+  } else {
+    authenticateToken(req, res, next);
+  }
+}, async (req, res) => {
   try {
     const { appId } = req.params;
-    const userId = req.user.id;
+    const isPreview = req.query.preview;
 
-    // Verify user owns the app
+    // For preview mode, skip user verification
+    if (isPreview) {
+      console.log('🎥 CANVAS: Preview mode - skipping user verification');
+    }
+
+    const userId = req.user?.id;
+
+    // Verify user owns the app (skip for preview)
     const app = await prisma.app.findFirst({
       where: {
         id: parseInt(appId),
-        ownerId: userId
+        ...(isPreview ? {} : { ownerId: userId })
       }
     });
 
@@ -44,7 +60,16 @@ router.get('/:appId', authenticateToken, async (req, res) => {
     // Get or create canvas
     let canvas = await prisma.canvas.findUnique({
       where: { appId: parseInt(appId) },
-      include: {
+      select: {
+        id: true,
+        appId: true,
+        name: true,
+        description: true,
+        width: true,
+        height: true,
+        background: true,
+        zoomLevel: true,
+        canvasState: true, // Include the canvasState field
         elements: {
           include: {
             interactions: true,
@@ -64,7 +89,16 @@ router.get('/:appId', authenticateToken, async (req, res) => {
           name: `${app.name} Canvas`,
           description: 'Drag-and-drop canvas interface'
         },
-        include: {
+        select: {
+          id: true,
+          appId: true,
+          name: true,
+          description: true,
+          width: true,
+          height: true,
+          background: true,
+          zoomLevel: true,
+          canvasState: true, // Include the canvasState field
           elements: {
             include: {
               interactions: true,
@@ -76,6 +110,9 @@ router.get('/:appId', authenticateToken, async (req, res) => {
         }
       });
     }
+
+    console.log('📄 DEBUG: Loaded Canvas for GET request:', JSON.stringify(canvas, null, 2));
+    console.log('🔍 DEBUG: Canvas has canvasState:', !!canvas.canvasState);
 
     res.json({
       success: true,
@@ -467,9 +504,12 @@ router.delete('/:appId/elements/:elementId', authenticateToken, async (req, res)
 // PATCH /api/canvas/:appId/state - Save complete canvas state
 router.patch('/:appId/state', authenticateToken, async (req, res) => {
   try {
+    console.log('🚀 DEBUG: Canvas state save endpoint hit for appId:', req.params.appId);
+    console.log('📦 DEBUG: Incoming canvasState:', JSON.stringify(req.body.canvasState, null, 2));
     const { appId } = req.params;
     const userId = req.user.id;
     const { canvasState } = req.body;
+    console.log('📊 DEBUG: Received canvasState:', !!canvasState, 'has pages:', !!canvasState?.pages, 'pages count:', canvasState?.pages?.length || 0);
 
     // Verify user owns the app
     const app = await prisma.app.findFirst({
@@ -564,17 +604,47 @@ router.patch('/:appId/state', authenticateToken, async (req, res) => {
       });
     }
 
+    // Store the full canvasState (including pages array) as JSON
+    let canvasStateJson = null;
+    try {
+      canvasStateJson = JSON.stringify(canvasState);
+      console.log('📄 DEBUG: Storing full canvasState with pages:', canvasStateJson.substring(0, 200) + '...');
+      console.log('📊 DEBUG: canvasState has pages:', !!canvasState.pages);
+      console.log('📊 DEBUG: pages count:', canvasState.pages?.length || 0);
+    } catch (jsonError) {
+      console.error('❌ Failed to stringify canvasState:', jsonError);
+      // Continue without storing canvasState if JSON serialization fails
+    }
+
+    console.log('🔧 DEBUG: About to update canvas with canvasState:', !!canvasStateJson);
+
     // Update canvas properties
-    await prisma.canvas.update({
-      where: { id: canvas.id },
-      data: {
+    try {
+      console.log('🔧 DEBUG: About to update canvas with data:', {
         name: canvasState.name || canvas.name,
-        width: canvasState.width || canvas.width,
-        height: canvasState.height || canvas.height,
-        background: canvasState.background || canvas.background,
-        zoomLevel: canvasState.zoomLevel || canvas.zoomLevel
-      }
-    });
+        canvasStateLength: canvasStateJson?.length || 0,
+        hasCanvasState: !!canvasStateJson
+      });
+
+      const updateResult = await prisma.canvas.update({
+        where: { id: canvas.id },
+        data: {
+          name: canvasState.name || canvas.name,
+          width: canvasState.width || canvas.width,
+          height: canvasState.height || canvas.height,
+          background: canvasState.background || canvas.background,
+          canvasState: canvasStateJson, // Store full pages array
+          zoomLevel: canvasState.zoomLevel || canvas.zoomLevel
+        }
+      });
+
+      console.log('✅ DEBUG: Canvas updated successfully!');
+      console.log('📄 DEBUG: Updated Canvas:', JSON.stringify(updateResult, null, 2));
+    } catch (updateError) {
+      console.error('❌ DEBUG: Prisma update error:', updateError.message);
+      console.error('❌ DEBUG: Error code:', updateError.code);
+      throw updateError;
+    }
 
     // Record history
     await prisma.canvasHistory.create({
@@ -738,6 +808,242 @@ router.post('/:appId/elements/:elementId/duplicate', authenticateToken, async (r
     res.status(500).json({
       success: false,
       message: 'Failed to duplicate element'
+    });
+  }
+});
+
+// ===== WORKFLOW MANAGEMENT =====
+
+// PATCH /api/workflows/:appId - Save workflow JSON
+router.patch('/workflows/:appId', authenticateToken, async (req, res) => {
+  try {
+    console.log('💾 DEBUG: Workflow save endpoint hit for appId:', req.params.appId);
+    const { appId } = req.params;
+    const userId = req.user.id;
+    const { elementId, nodes, edges, metadata } = req.body;
+
+    console.log('📦 DEBUG: Workflow data:', { appId, elementId, nodesCount: nodes?.length, edgesCount: edges?.length });
+    console.log('📦 DEBUG: Element ID:', elementId);
+    console.log('📦 DEBUG: App ID:', appId);
+
+    // Validate required fields
+    if (!elementId) {
+      console.error('❌ DEBUG: elementId is missing');
+      return res.status(400).json({
+        success: false,
+        message: 'elementId is required'
+      });
+    }
+
+    if (!nodes || !Array.isArray(nodes)) {
+      return res.status(400).json({
+        success: false,
+        message: 'nodes array is required'
+      });
+    }
+
+    if (!edges || !Array.isArray(edges)) {
+      return res.status(400).json({
+        success: false,
+        message: 'edges array is required'
+      });
+    }
+
+    // Verify user owns the app
+    const app = await prisma.app.findFirst({
+      where: {
+        id: parseInt(appId),
+        ownerId: userId
+      }
+    });
+
+    if (!app) {
+      return res.status(404).json({
+        success: false,
+        message: 'App not found or access denied'
+      });
+    }
+
+    // Upsert workflow (create if not exists, update if exists)
+    console.log('🔍 DEBUG: Looking for existing workflow with appId:', parseInt(appId), 'elementId:', elementId);
+    const existingWorkflow = await prisma.workflow.findFirst({
+      where: {
+        appId: parseInt(appId),
+        elementId: elementId
+      },
+      select: { id: true }
+    });
+    console.log('🔍 DEBUG: Existing workflow found:', existingWorkflow ? `ID ${existingWorkflow.id}` : 'None (will create new)');
+
+    const workflow = await prisma.workflow.upsert({
+      where: {
+        id: existingWorkflow?.id || 0 // Use 0 as a non-existent ID to trigger create
+      },
+      update: {
+        nodes: nodes,
+        edges: edges,
+        metadata: metadata || {},
+        updatedAt: new Date()
+      },
+      create: {
+        appId: parseInt(appId),
+        elementId: elementId,
+        name: `Workflow for ${elementId}`,
+        nodes: nodes,
+        edges: edges,
+        metadata: metadata || {}
+      }
+    });
+
+    console.log('✅ DEBUG: Workflow saved successfully - ID:', workflow.id, 'elementId:', workflow.elementId, 'appId:', workflow.appId);
+
+    // Record history
+    await prisma.canvasHistory.create({
+      data: {
+        canvasId: (await prisma.canvas.findUnique({ where: { appId: parseInt(appId) } }))?.id || 0,
+        action: 'workflow_save',
+        elementId: elementId,
+        newState: { nodes, edges, metadata },
+        userId
+      }
+    }).catch(err => console.warn('History save failed:', err.message));
+
+    // Emit real-time update
+    if (io) {
+      io.to(`app:${appId}`).emit('workflow:saved', {
+        appId: parseInt(appId),
+        elementId,
+        workflow,
+        savedBy: userId,
+        timestamp: new Date()
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Workflow saved successfully',
+      data: workflow
+    });
+
+  } catch (error) {
+    console.error('❌ Workflow save error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to save workflow',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/workflows/:appId - Get all workflows for an app (or specific element)
+router.get('/workflows/:appId', (req, res, next) => {
+  if (req.query.preview) {
+    console.log('🎥 WORKFLOWS: Bypassing auth for preview mode');
+    next(); // Bypass auth for preview
+  } else {
+    authenticateToken(req, res, next);
+  }
+}, async (req, res) => {
+  try {
+    console.log('📖 DEBUG: Workflow get endpoint hit for appId:', req.params.appId);
+    const { appId } = req.params;
+    const { elementId, preview } = req.query; // Optional query parameters
+    const userId = req.user?.id;
+    const isPreview = preview === 'true';
+
+    console.log('📖 DEBUG: Query params:', { appId, elementId: elementId || 'all', preview: isPreview });
+
+    // For preview mode, skip user verification
+    if (isPreview) {
+      console.log('🎥 WORKFLOWS: Preview mode - skipping user verification');
+    }
+
+    // Verify user owns the app (skip for preview)
+    const app = await prisma.app.findFirst({
+      where: {
+        id: parseInt(appId),
+        ...(isPreview ? {} : { ownerId: userId })
+      }
+    });
+
+    if (!app) {
+      return res.status(404).json({
+        success: false,
+        message: 'App not found or access denied'
+      });
+    }
+
+    // Build where clause with optional elementId filter
+    const whereClause = {
+      appId: parseInt(appId)
+    };
+
+    if (elementId) {
+      whereClause.elementId = elementId;
+      console.log('📖 DEBUG: Filtering by elementId:', elementId);
+    }
+
+    // Get workflows for this app (optionally filtered by elementId)
+    const workflows = await prisma.workflow.findMany({
+      where: whereClause,
+      orderBy: {
+        updatedAt: 'desc'
+      }
+    });
+
+    console.log('✅ DEBUG: Found', workflows.length, 'workflow(s) for appId:', appId, 'elementId:', elementId || 'all');
+
+    if (workflows.length > 0) {
+      console.log('✅ DEBUG: Workflow elementIds:', workflows.map(w => w.elementId).join(', '));
+    }
+
+    // If elementId was specified, return single workflow or null
+    if (elementId) {
+      const workflow = workflows[0] || null;
+      if (workflow) {
+        console.log('✅ DEBUG: Returning workflow for element:', elementId, 'with', workflow.nodes?.length || 0, 'nodes');
+
+        // Process nodes to handle dynamic URLs and pageId
+        if (workflow.nodes) {
+          const processedNodes = workflow.nodes.map(node => {
+            if (node.data && node.data.category === 'Actions' && node.data.label === 'page.redirect') {
+              // Keep dynamic URL references as-is for frontend processing
+              console.log('🔄 DEBUG: Found page.redirect node with URL:', node.data.url, 'pageId:', node.data.pageId);
+
+              // Ensure pageId is set for multi-page redirects
+              if (!node.data.pageId && !node.data.url) {
+                // Default to page 2 for demo purposes
+                node.data.pageId = 2;
+                console.log('🔄 DEBUG: Set default pageId to 2 for page.redirect node');
+              }
+
+              return node;
+            }
+            return node;
+          });
+          workflow.nodes = processedNodes;
+        }
+      } else {
+        console.log('ℹ️  DEBUG: No workflow found for element:', elementId);
+      }
+      res.json({
+        success: true,
+        data: workflow
+      });
+    } else {
+      // Return all workflows
+      res.json({
+        success: true,
+        data: workflows
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ Workflow get error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve workflows',
+      error: error.message
     });
   }
 });
