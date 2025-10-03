@@ -24,6 +24,10 @@
   "author": "",
   "license": "ISC",
   "description": "",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
   "dependencies": {
     "@prisma/client": "^6.15.0",
     "axios": "^1.12.2",
