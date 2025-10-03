@@ -31,17 +31,20 @@ FloNeo/
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Node.js 18+
 - PostgreSQL 14+
 - npm or yarn
 
 ### 1. Clone Repository
+
 ```bash
-git clone https://github.com/yourusername/floneo.git
-cd floneo
+git clone https://github.com/prajeesh-floneo/Demo.git
+cd Demo
 ```
 
 ### 2. Backend Setup
+
 ```bash
 cd server
 npm install
@@ -62,6 +65,7 @@ npm start
 ```
 
 ### 3. Frontend Setup
+
 ```bash
 cd ../client
 npm install
@@ -75,6 +79,7 @@ npm run dev
 ```
 
 ### 4. Access Application
+
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:5000
 - API Documentation: http://localhost:5000/api-docs
@@ -82,6 +87,7 @@ npm run dev
 ## 🔧 Environment Variables
 
 ### Backend (.env)
+
 ```env
 DATABASE_URL="postgresql://user:pass@localhost:5432/floneo_db"
 JWT_SECRET="your-jwt-secret"
@@ -91,6 +97,7 @@ PORT="5000"
 ```
 
 ### Frontend (.env.local)
+
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:5000
 NEXT_PUBLIC_SOCKET_URL=http://localhost:5000
@@ -99,6 +106,7 @@ NEXT_PUBLIC_SOCKET_URL=http://localhost:5000
 ## 📚 API Documentation
 
 The API is documented using Swagger/OpenAPI. Access the interactive documentation at:
+
 - Development: http://localhost:5000/api-docs
 - View `server/swagger.yaml` for the complete API specification
 
@@ -118,12 +126,14 @@ npm test
 ## 🚀 Deployment
 
 ### Railway (Recommended)
+
 1. Connect your GitHub repository to Railway
 2. Deploy backend with PostgreSQL addon
 3. Deploy frontend with environment variables
 4. Configure custom domains
 
 ### Vercel + Railway
+
 1. Deploy backend to Railway with PostgreSQL
 2. Deploy frontend to Vercel
 3. Configure environment variables
@@ -145,6 +155,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🆘 Support
 
 For support and questions:
+
 - Create an issue on GitHub
 - Check the documentation in `/server/docs/`
 - Review the API documentation
