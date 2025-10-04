@@ -10,12 +10,5 @@
     "startCommand": "npx prisma migrate deploy && npm start",
     "healthcheckPath": "/health",
     "restartPolicyType": "ON_FAILURE"
-  },
-  "nixpacks": {
-    "phases": {
-      "setup": {
-        "nixPkgs": ["nodejs_20", "openssl"]
-      }
-    }
   }
 }
